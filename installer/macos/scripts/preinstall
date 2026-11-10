@@ -1,0 +1,7 @@
+#!/bin/sh
+# Mise a jour : la version precedente est retiree avant d'installer la nouvelle.
+# (Les projets et donnees de l'utilisateur ne sont jamais dans ce dossier.)
+if [ -d "/Applications/AbosCluster" ]; then
+    rm -rf "/Applications/AbosCluster"
+fi
+exit 0

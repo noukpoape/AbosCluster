@@ -1,0 +1,17 @@
+﻿AbosCluster 1.0 - Clustering sparse longitudinal trajectories
+Biological Atlas of Severe Obesity
+
+BEFORE YOU START
+- No internet connection is needed: the software and all its libraries are included in this file.
+- Close AbosCluster if it is running (after saving your project).
+
+AFTER INSTALLATION
+- Start AbosCluster from the Start menu or the desktop icon.
+- The program files are hidden.
+- The Help button displays the user manual (English or French, depending on the chosen language).
+
+UNINSTALLING
+- Start menu > AbosCluster > Uninstall AbosCluster, or Settings > Apps.
+- Your projects and data are never deleted.
+
+Authors: Komlan Noukpoape, Cristian Preda (Inria)

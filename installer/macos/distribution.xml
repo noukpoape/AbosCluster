@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Etapes de l'installeur macOS : Introduction, Lisez-moi, Installation, Resume.
+     @ARCH@ (arm64 ou x86_64) et @VERSION@ sont remplaces par build_pkg.sh. -->
+<installer-gui-script minSpecVersion="2">
+    <title>AbosCluster</title>
+    <welcome file="welcome.html" mime-type="text/html"/>
+    <readme file="readme.html" mime-type="text/html"/>
+    <conclusion file="conclusion.html" mime-type="text/html"/>
+    <background file="logo.png" alignment="bottomleft" scaling="none"/>
+    <background-darkAqua file="logo.png" alignment="bottomleft" scaling="none"/>
+    <options customize="never" require-scripts="false" hostArchitectures="@ARCH@"/>
+    <domains enable_localSystem="true" enable_currentUserHome="false" enable_anywhere="false"/>
+    <allowed-os-versions>
+        <os-version min="11.0"/>
+    </allowed-os-versions>
+    <choices-outline>
+        <line choice="default">
+            <line choice="fr.inria.aboscluster"/>
+        </line>
+    </choices-outline>
+    <choice id="default"/>
+    <choice id="fr.inria.aboscluster" visible="false">
+        <pkg-ref id="fr.inria.aboscluster"/>
+    </choice>
+    <pkg-ref id="fr.inria.aboscluster" version="@VERSION@" onConclusion="none">#AbosCluster-composant.pkg</pkg-ref>
+</installer-gui-script>

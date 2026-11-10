@@ -1,0 +1,7 @@
+*.pyc
+.DS_Store
+.venv/
+__MACOSX/
+__pycache__/
+build/
+dist/

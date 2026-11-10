@@ -1,0 +1,179 @@
+# Construit les installeurs d'AbosCluster et les publie dans une Release GitHub.
+#  - automatique : push d'un tag de version (ex. git tag v1.0.0 && git push origin v1.0.0)
+#  - manuel (test, sans publication) : Actions > release > Run workflow
+#    -> installeurs disponibles dans les « Artifacts » de l'execution
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  # ---------------------------------------------------------------- Windows
+  windows:
+    name: Windows 10/11 (64-bit)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Version
+        shell: bash
+        run: echo "ABOS_VERSION=$( [ "$GITHUB_REF_TYPE" = tag ] && echo "${GITHUB_REF_NAME#v}" || echo 1.0.0 )" >> "$GITHUB_ENV"
+      - name: Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+      - name: PyInstaller
+        run: pyinstaller --noconfirm --clean installer/aboscluster.spec
+      - name: Check bundle and start-up
+        shell: pwsh
+        run: |
+          foreach ($f in @("dist/AbosCluster/AbosCluster.exe",
+                           "dist/AbosCluster/_internal/ABOS/help_p.png",
+                           "dist/AbosCluster/_internal/ABOS/manuals/User_manual_AbosCluster_FR.pdf",
+                           "dist/AbosCluster/_internal/ABOS/manuals/User_manual_AbosCluster_EN.pdf")) {
+            if (-not (Test-Path $f)) { throw "Missing: $f" }
+          }
+          $p = Start-Process "dist/AbosCluster/AbosCluster.exe" -PassThru
+          Start-Sleep -Seconds 20
+          if ($p.HasExited) { throw "AbosCluster stopped at start-up (exit code $($p.ExitCode))" }
+          Stop-Process -Id $p.Id -Force
+      - name: Inno Setup
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          & $iscc "/DAppVersion=$env:ABOS_VERSION" installer\windows\AbosCluster.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AbosCluster-Windows
+          path: dist/AbosCluster-Windows-Setup.exe
+
+  # ---------------------------------------------------------------- macOS
+  macos:
+    name: macOS ${{ matrix.variante }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15            # Apple silicon (arm64)
+            variante: AppleSilicon
+          - runner: macos-15-intel      # Intel (x86_64)
+            variante: Intel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Version
+        run: echo "ABOS_VERSION=$( [ "$GITHUB_REF_TYPE" = tag ] && echo "${GITHUB_REF_NAME#v}" || echo 1.0.0 )" >> "$GITHUB_ENV"
+      - name: Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+      - name: PyInstaller
+        run: pyinstaller --noconfirm --clean installer/aboscluster.spec
+      - name: Check bundle and start-up
+        run: |
+          R=dist/AbosCluster.app/Contents
+          for f in "$R/MacOS/AbosCluster" "$R/Resources/ABOS/help_p.png" \
+                   "$R/Resources/ABOS/manuals/User_manual_AbosCluster_FR.pdf" \
+                   "$R/Resources/ABOS/manuals/User_manual_AbosCluster_EN.pdf"; do
+            test -e "$f" || { echo "Missing: $f"; exit 1; }
+          done
+          file "$R/MacOS/AbosCluster"
+          "$R/MacOS/AbosCluster" & PID=$!
+          sleep 20
+          kill -0 $PID || { echo "AbosCluster stopped at start-up"; exit 1; }
+          kill $PID
+      - name: Installer (.pkg)
+        run: bash installer/macos/build_pkg.sh "$ABOS_VERSION"
+      - name: Check architecture
+        run: |
+          case "${{ matrix.variante }}" in AppleSilicon) A=arm64 ;; Intel) A=x86_64 ;; esac
+          lipo -archs dist/AbosCluster.app/Contents/MacOS/AbosCluster | grep -qw "$A"
+          ls -la dist/AbosCluster-macOS-${{ matrix.variante }}.pkg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AbosCluster-macOS-${{ matrix.variante }}
+          path: dist/AbosCluster-macOS-${{ matrix.variante }}.pkg
+
+  # ---------------------------------------------------------------- Linux
+  linux:
+    name: Linux (x86_64)
+    runs-on: ubuntu-22.04              # glibc 2.35 : Ubuntu 22.04+, Debian 12+, Fedora 36+...
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Version
+        run: echo "ABOS_VERSION=$( [ "$GITHUB_REF_TYPE" = tag ] && echo "${GITHUB_REF_NAME#v}" || echo 1.0.0 )" >> "$GITHUB_ENV"
+      - name: Dependencies
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q xvfb
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+      - name: PyInstaller
+        run: pyinstaller --noconfirm --clean installer/aboscluster.spec
+      - name: Check bundle and start-up
+        run: |
+          for f in dist/AbosCluster/AbosCluster dist/AbosCluster/_internal/ABOS/help_p.png \
+                   dist/AbosCluster/_internal/ABOS/manuals/User_manual_AbosCluster_FR.pdf \
+                   dist/AbosCluster/_internal/ABOS/manuals/User_manual_AbosCluster_EN.pdf; do
+            test -e "$f" || { echo "Missing: $f"; exit 1; }
+          done
+          set +e
+          timeout 20 xvfb-run -a dist/AbosCluster/AbosCluster
+          code=$?
+          [ $code -eq 124 ] || { echo "AbosCluster stopped at start-up (code $code)"; exit 1; }
+      - name: Installer (.run)
+        run: sh installer/linux/build_run.sh "$ABOS_VERSION"
+      - name: Test install / uninstall
+        run: |
+          sh ./dist/AbosCluster-Linux-x86_64.run --yes
+          test -x "$HOME/.local/share/AbosCluster/AbosCluster/AbosCluster"
+          "$HOME/.local/share/AbosCluster/uninstall.sh" --yes
+          test ! -e "$HOME/.local/share/AbosCluster"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AbosCluster-Linux
+          path: dist/AbosCluster-Linux-x86_64.run
+
+  # ---------------------------------------------------------------- Release
+  release:
+    name: Publish release
+    if: github.ref_type == 'tag'
+    needs: [windows, macos, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: AbosCluster ${{ github.ref_name }}
+          files: assets/*
+          body: |
+            ## Installation (no internet connection needed / aucune connexion internet nécessaire)
+
+            | System / Système | File / Fichier |
+            |---|---|
+            | Windows 10 / 11 (64-bit) | `AbosCluster-Windows-Setup.exe` |
+            | macOS — Apple silicon (M1, M2, M3…) | `AbosCluster-macOS-AppleSilicon.pkg` |
+            | macOS — Intel | `AbosCluster-macOS-Intel.pkg` |
+            | Linux (64-bit, x86_64) | `AbosCluster-Linux-x86_64.run` |
+
+            Install and uninstall steps / Étapes d'installation et de désinstallation : [INSTALL.md](https://github.com/${{ github.repository }}/blob/main/INSTALL.md)

@@ -1,0 +1,10 @@
+*.bat text eol=crlf
+*.iss text eol=crlf
+*.pdf binary
+*.png binary
+*.ico binary
+*.sh text eol=lf
+*.applescript text eol=lf
+installer/macos/scripts/* text eol=lf
+*.bmp binary
+*.icns binary

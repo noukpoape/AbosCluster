@@ -1,0 +1,17 @@
+﻿AbosCluster 1.0 - Clustering de trajectoires longitudinales éparses
+Biological Atlas of Severe Obesity
+
+AVANT DE COMMENCER
+- L'installation ne nécessite aucune connexion internet : le logiciel et toutes ses bibliothèques sont inclus dans ce fichier.
+- Fermez AbosCluster s'il est ouvert (après avoir enregistré votre projet).
+
+APRÈS L'INSTALLATION
+- Lancez AbosCluster depuis le menu Démarrer ou l'icône du Bureau.
+- Les fichiers du programme sont masqués.
+- Le bouton Help affiche le manuel d'utilisation (français ou anglais, selon la langue choisie).
+
+DÉSINSTALLATION
+- Menu Démarrer > AbosCluster > Désinstaller AbosCluster, ou Paramètres > Applications.
+- Vos projets et vos données ne sont jamais supprimés.
+
+Auteurs : Komlan Noukpoape, Cristian Preda (Inria)

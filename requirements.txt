@@ -1,0 +1,10 @@
+# Dependances d'execution d'AbosCluster
+numpy
+pandas
+matplotlib
+openpyxl          # lecture / ecriture .xlsx
+xlrd              # lecture .xls
+pillow
+python-docx       # export Word
+tkmacosx          # boutons (Windows et macOS)
+pypdfium2>=4.20,<6   # affichage du manuel (bouton Help), hors ligne
